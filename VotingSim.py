@@ -197,6 +197,11 @@ class CTF:
             print(self.options[i].numVotes)
             print("----------------------")
             
+    """Simulates random vote"""
+    def randomVote(self, voter):
+        aVote = string.ascii_uppercase[random.randint(0, 3)]
+        voter.setVote(aVote)                 
+            
 """Represents a candidate"""
 class Candidate:
     candidateNum = None
