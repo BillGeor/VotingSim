@@ -354,11 +354,11 @@ def main():
         print("\t1. Make Voters.")
         print("\t2. Simulate Votes.")
         print("\t3. See Results.")
-        print("\t4. Request Voting Authorization.")
-        print("\t5. Cast Vote.")
-        print("\t6. Check Voting Status.")
-        print("\t7. Who Has Voted")
-        print("\t8. Quit.\n")
+        # print("\t4. Request Voting Authorization.")
+        # print("\t5. Cast Vote.")
+        # print("\t6. Check Voting Status.")
+        # print("\t7. Who Has Voted")
+        print("\t4. Quit.\n")
         choice = input(">> ")
 
         #Make voters
@@ -402,6 +402,8 @@ def main():
 
         #Simulate random votes
         elif choice == '2'and (timeit.default_timer()-start <=60):
+            for j in range(len(ctf.options)):
+                ctf.options[j].numVotes = 0
             #while there are people who have not voted
             while len(ctf.notVotedList)!=0:
                 #get a random voter
@@ -424,40 +426,8 @@ def main():
             else:
                 print("Sorry, the list of candidates is empty!")
 
-
-        #Give user an authorization number
-        elif choice == '4':
-            newVoter = Voter()
-            theName = input("Please enter your name: ")
-            newVoter.setName(theName)
-            cla.authNumRequest(newVoter)
-            voters.append(newVoter)
-            print ("Your authorization number is: ", newVoter.authNum)
-
-        #Let user vote
-        elif choice == '5':
-            theNum = int(input("Please enter your authorization number: "))
-            if (cla.canVote(theNum) == True):
-                    ctf.countVoteRequest(cla.authList[hashlib.md5(theNum).hexdigest()], False)
-
-        #Check if user has voted
-        elif choice == '6':
-            authNum = input("Please enter your authorization number: ")
-            if (cla.canVote(authNum) == True and ctf.voterExists(authNum) == False):
-                        print("You have already voted!")
-            elif (cla.canVote(authNum) == True and ctf.voterExists(authNum) == True):
-                        print("You are able to Vote!")
-        #See who has voted and who hasn't
-        elif choice == '7':
-            print("Voter\tVote Status")
-            for i in range(len(voters)):
-                if voters[i].vote is None:
-                    print(voters[i].name, "\t\t No vote.")
-                else:
-                    print(voters[i].name, "\t\t Voted.")
-
         #End simulation
-        elif choice == '8' or (timeit.default_timer()-start > 60):
+        elif choice == '4' or (timeit.default_timer()-start > 60):
             break
         else:
             print("\n\nUnknown option {}.\n".format(choice))
