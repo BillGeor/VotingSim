@@ -156,15 +156,15 @@ class CTF:
     randomVote - if a random vote needs to be calculated or the user will enter a vote"""
     def countVoteStub(self, voter):        
         #Check if voter is in CLA list and is authorized to vote
-        if self.cla.canVote(voter.authNum):
+        if self.cla.canVote(voter):
             #check if voter is in CTF list and has voted
-            if (self.cla.hasVoted(voter.authNum) == False):
+            if (self.cla.hasVoted(voter) == False):
 
                 #remove voter from list of people who haven't voted and
                 #adds that voter to a list of people who have voted
             
                 #allow user to enter a vote manually
-                voter.setVote(input("Please enter your vote: "))
+                voter.setVote(self.randomVote(voter))
                 #remove voter from list of people who haven't voted
                 self.notVotedList.remove(voter.authNum)
                 self.votedList.append(voter.authNum)
@@ -322,7 +322,7 @@ def main():
                 #get a random voter
                 randomVoter = random.randint(0, len(voters)-1)
                 #simulate and count random vote
-                ctf.countVoteStub(voters[randomVoter], True)
+                ctf.countVoteStub(voters[randomVoter])
             
             if (len(ctf.notVotedList) == 0):
                 print("The list of voters is empty!")
