@@ -99,19 +99,31 @@ class CLA:
     def setCTF(self, ctf):
         self.ctf = ctf
 
-    """Authorization Number Stub
+    """Authorization Number Request
     Creates random authorization number for a voter
     and adds the voter to the list of authorized voters.
     Nothing is encrypted yet"""
-    def authNumStub(self, voter):
+    def authNumRequest(self, voter):
+        #assigning an auth num to a voter
         randAuthNum = random.randint(1000,2000)
-        voter.setAuthNum(str(randAuthNum))
-        self.authList[hashlib.md5(voter.authNum.encode()).hexdigest()] = hashlib.md5(str(voter.name).encode()).hexdigest()
-        if(len(self.ctf.notVotedList) != 0):
-            self.ctf.notVotedList[hashlib.md5(voter.authNum.encode()).hexdigest()] = hashlib.md5(str(voter.name).encode()).hexdigest()
-        else:
-            self.ctf.notVotedList = self.authList
-        #test line please delete me
+        #! ENCRYPTION MESSAGE EXCHANGE SIMULATION
+        encrNum = self.sendMessage(str(randAuthNum), voter)
+        decrNum = voter.recieveMessage(encrNum, self)
+        #! ENCRYPTION SIMULATION END
+        voter.setAuthNum(decrNum)
+        
+        #noting the authNum/Voter relation in CLA authList
+        self.authList[hashlib.md5(str(voter.authNum).encode()).hexdigest()] = hashlib.md5(str(voter.name).encode()).hexdigest()        
+        key = hashlib.md5(str(voter.authNum).encode()).hexdigest()
+        value = hashlib.md5(str(voter.name).encode()).hexdigest()
+        
+        #! ENCRYPTION MESSAGE EXCHANGE SIMULATION
+        updatePing = [key, value]
+        encUpdate = self.sendMessage(str(updatePing), self.ctf)
+        self.ctf.updateList(encUpdate)
+        #! ENCRYPTION SIMULATION END
+        
+        
 
     def canVote(self, authNumber):
         if(authNumber != None):
@@ -128,6 +140,28 @@ class CLA:
         else:
             print('User has no auth number')
             return False
+        
+    #* sends a message to a certain receiver
+    def sendMessage(self, plaintext, receiver):
+        #enrcypt plaintext using the receiver's public key
+        x = encrypt(plaintext, receiver.publicKey)
+
+        #create signature using sender's private key
+        s = createSign(self.__privateKey, plaintext)
+
+        encrMessage = [x, s]
+        return encrMessage
+
+    #* decrypts a message received by a specific sender
+    def recieveMessage(self, encrMessage, sender):
+        message = decrypt(
+            encrMessage[0], #encrypted message x
+            encrMessage[1], #sender's signature s
+            self.__privateKey,
+            sender.publicKey
+        )
+        return message
+
 
 """Represents CTF"""
 class CTF:
@@ -146,25 +180,32 @@ class CTF:
     allows user to vote
     voter - a voter object
     randomVote - if a random vote needs to be calculated or the user will enter a vote"""
-    def countVoteStub(self, voter, randomVote):
+    def countVoteRequest(self, voter, randomVote):
         #Check if voter is in CLA list and is authorized to vote
-        if self.cla.canVote(voter.authNum):
+        #! ENCRYPTION MESSAGE EXCHANGE SIMULATION
+        encrAuthNum = voter.sendMessage(str(voter.authNum), self)
+        decrAuthNum = self.recieveMessage(encrAuthNum, voter)
+        #! ENCRYPTION SIMULATION END
+        if self.cla.canVote(decrAuthNum):
             #check if voter is in CTF list and has voted
-            if (self.voterExists(voter.authNum) == True):
+            if (self.voterExists(decrAuthNum) == True):
                 #calculate random vote
                 if(randomVote):
                     #random vote
                     self.randomVote(voter)
                     #remove voter from list of people who haven't voted
-                    del self.notVotedList[hashlib.md5(voter.authNum.encode()).hexdigest() ]
+                    del self.notVotedList[hashlib.md5(decrAuthNum.encode()).hexdigest() ]
                 else:
                     #allow user to enter a vote manually
                     voter.setVote(input("Please enter your vote: "))
                     #remove voter from list of people who haven't voted
-                    del self.notVotedList[hashlib.md5(voter.authNum.encode()).hexdigest() ]
+                    del self.notVotedList[hashlib.md5(decrAuthNum.encode()).hexdigest() ]
 
                 #get the vote
-                theVote = voter.vote
+                #! ENCRYPTION MESSAGE EXCHANGE SIMULATION
+                encrVote = voter.sendMessage(str(voter.vote), self)
+                theVote = decrVote = self.recieveMessage(encrVote, voter)
+                #! ENCRYPTION SIMULATION END
 
                 #first candidate in list
                 if len(self.options) == 0:
@@ -195,23 +236,54 @@ class CTF:
                         #add vote
                         self.options[j].addVote()
                         counted = True
-                print("Your vote has been counted!\n")
+                # print("Your vote has been counted!\n")
 
+    #* update an entry from CLA when a user requests and is given an auth number
+    def updateList(self, encUpdate):
+        decrUpdate = self.recieveMessage(encUpdate, self.cla)
+        decrUpdate = decrUpdate[2:len(decrUpdate)-2]
+        decrUpdateArr = decrUpdate.split("', '")
+        self.notVotedList[decrUpdateArr[0]] = decrUpdateArr[1]
+        
+    
     def voterExists(self, authNumber):
         #Check if voter is in CLA list and is authorized to vote
         try:
             self.notVotedList[hashlib.md5(authNumber.encode()).hexdigest()]
             return True
         except KeyError as e:
-            print('Voter has Voted', str(e))
+            # print('Voter has Voted',e))
             return False
         except IndexError as e:
-            print('Voter has Voted', str(e))
+            # print('Voter has Voted', str(e))
             return False
+    
     """Simulates random vote"""
     def randomVote(self, voter):
         aVote = string.ascii_uppercase[random.randint(0, 3)]
         voter.setVote(aVote)
+    
+    #* sends a message to a certain receiver
+    def sendMessage(self, plaintext, receiver):
+        #enrcypt plaintext using the receiver's public key
+        x = encrypt(plaintext, receiver.publicKey)
+
+        #create signature using sender's private key
+        s = createSign(self.__privateKey, plaintext)
+
+        encrMessage = [x, s]
+        return encrMessage
+
+    #* decrypts a message received by a specific sender
+    def recieveMessage(self, encrMessage, sender):
+        message = decrypt(
+            encrMessage[0], #encrypted message x
+            encrMessage[1], #sender's signature s
+            self.__privateKey,
+            sender.publicKey
+        )
+        return message
+
 
 """Represents a candidate"""
 class Candidate:
@@ -222,7 +294,7 @@ class Candidate:
     def setNumber(self, num):
         self.candidateNum = num
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#* Voter Object
 class Voter:
     #* Initializer / Instance Attributes
     def __init__(self):
@@ -269,7 +341,6 @@ class Voter:
         return message
 
 
-
 def main():
     voters = []
     start = timeit.default_timer()
@@ -312,8 +383,7 @@ def main():
                     print("ATTENTION: Do NOT close the terminal! This process takes several seconds due to key generation time!")
                     for i in range (requestAuth):
                         aVoter = Voter()
-                        #give voter an authorization number
-                        cla.authNumStub(aVoter)
+                        cla.authNumRequest(aVoter)
                         #add voter to list of total voters
                         voters.append(aVoter)
                     #voters who don't want an authorization number
@@ -337,10 +407,12 @@ def main():
                 #get a random voter
                 randomVoter = random.randint(0, len(voters)-1)
                 #simulate and count random vote
-                ctf.countVoteStub(voters[randomVoter], True)
+                ctf.countVoteRequest(voters[randomVoter], True)
 
             if (len(ctf.notVotedList) == 0):
                 print("The list of voters is empty!")
+            
+            print("Voting process has been completed! Enter '3' to see results.")
 
         #Voting breakdown
         elif choice == '3' and (timeit.default_timer()-start <=60):
@@ -352,12 +424,13 @@ def main():
             else:
                 print("Sorry, the list of candidates is empty!")
 
+
         #Give user an authorization number
         elif choice == '4':
             newVoter = Voter()
             theName = input("Please enter your name: ")
             newVoter.setName(theName)
-            cla.authNumStub(newVoter)
+            cla.authNumRequest(newVoter)
             voters.append(newVoter)
             print ("Your authorization number is: ", newVoter.authNum)
 
@@ -365,7 +438,7 @@ def main():
         elif choice == '5':
             theNum = int(input("Please enter your authorization number: "))
             if (cla.canVote(theNum) == True):
-                    ctf.countVoteStub(cla.authList[hashlib.md5(theNum).hexdigest()], False)
+                    ctf.countVoteRequest(cla.authList[hashlib.md5(theNum).hexdigest()], False)
 
         #Check if user has voted
         elif choice == '6':
