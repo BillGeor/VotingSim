@@ -156,7 +156,7 @@ class CTF:
     randomVote - if a random vote needs to be calculated or the user will enter a vote"""
     def countVoteStub(self, voter):        
         #Check if voter is in CLA list and is authorized to vote
-        if self.cla.canVote(voter.authNum):
+        if self.cla.canVote(voter):
             #check if voter is in CTF list and has voted
             if (self.cla.hasVoted(voter.authNum) == False):
 
@@ -164,7 +164,7 @@ class CTF:
                 #adds that voter to a list of people who have voted
             
                 #allow user to enter a vote manually
-                voter.setVote(input("Please enter your vote: "))
+                self.randomVote(voter)
                 #remove voter from list of people who haven't voted
                 self.notVotedList.remove(voter.authNum)
                 self.votedList.append(voter.authNum)
@@ -200,12 +200,20 @@ class CTF:
             
 """Represents a candidate"""
 class Candidate:
-    candidateNum = None
-    numVotes = 0
+    def __init__(self, name, candidateNum):
+        self.name = name
+        self.candidateNum = candidateNum
+        self.numVotes = 0
+        
     def addVote(self):
         self.numVotes+=1
-    def setNumber(self, num):
-        self.candidateNum = num
+    # def setNumber(self, num):
+    #     self.candidateNum = num
+        
+candidate1 = Candidate("Alice", 0)
+candidate2 = Candidate("Bob", 1)
+candidate3 = Candidate("Oscar", 2)
+candidate4 = Candidate("Yeet", 3)
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 class Voter:
@@ -322,7 +330,7 @@ def main():
                 #get a random voter
                 randomVoter = random.randint(0, len(voters)-1)
                 #simulate and count random vote
-                ctf.countVoteStub(voters[randomVoter], True)
+                ctf.countVoteStub(voters[randomVoter])
             
             if (len(ctf.notVotedList) == 0):
                 print("The list of voters is empty!")
@@ -351,7 +359,7 @@ def main():
             theNum = int(input("Please enter your authorization number: "))
             for i in range(len(cla.authList)):
                 if cla.authList[i].authNum == theNum:
-                    ctf.countVoteStub(cla.authList[i], False)
+                    ctf.countVoteStub(cla.authList[i])
                
         #Check if user has voted        
         elif choice == '6':
