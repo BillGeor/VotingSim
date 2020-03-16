@@ -9,11 +9,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
-import hashlib
-import timeit
-import signal
-import random
-import string
+import hashlib, timeit, signal, random, string
 
 
 #* creates a public key for a user of the cryptosystem
@@ -116,7 +112,6 @@ class CLA:
         else:
             self.ctf.notVotedList = self.authList
         #test line please delete me
-        print(self.authList)
 
     def canVote(self, authNumber):
         if(authNumber != None):
@@ -125,10 +120,10 @@ class CLA:
                 self.authList[hashlib.md5(authNumber.encode()).hexdigest()]
                 return True
             except KeyError as e:
-                print('User has no auth number', str(e))
+                # print('User has no auth number', str(e))
                 return False
             except IndexError as e:
-                print('User has no auth number.', str(e))
+                # print('User has no auth number.', str(e))
                 return False
         else:
             print('User has no auth number')
@@ -153,7 +148,7 @@ class CTF:
     randomVote - if a random vote needs to be calculated or the user will enter a vote"""
     def countVoteStub(self, voter, randomVote):
         #Check if voter is in CLA list and is authorized to vote
-        if self.cla.canVote(voter):
+        if self.cla.canVote(voter.authNum):
             #check if voter is in CTF list and has voted
             if (self.voterExists(voter.authNum) == True):
                 #calculate random vote
@@ -352,7 +347,6 @@ def main():
 
             if len(ctf.options)!=0:
                 print ("Here is the voting breakdown:\nCandidate:\tNumber of Votes:")
-                print(len(ctf.options))
                 for i in range(len(ctf.options)):
                     print(ctf.options[i].candidateNum, "\t\t\t\t", ctf.options[i].numVotes)
             else:
