@@ -1,8 +1,6 @@
-
 # -*- coding: utf-8 -*-
 """
-Created 12 March 2020 
-
+Created 12 March 2020
 @author: Bill, Phil, Fabien, Danielle
 """
 
@@ -11,7 +9,11 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
-import hashlib, timeit, signal, random, string
+import hashlib
+import timeit
+import signal
+import random
+import string
 
 
 #* creates a public key for a user of the cryptosystem
@@ -94,47 +96,43 @@ class CLA:
         self.ID = "CLA"
         self.__privateKey, self.publicKey = createUserKeys() # the voter's keys
         self.ctf = None
-        #list of authorized voters
-        self.authList = []
-    
+        #list of authorized voters as Hash Table
+        self.authList = {}
+
     #* setting CTF reference through CTF
     def setCTF(self, ctf):
         self.ctf = ctf
-    
+
     """Authorization Number Stub
     Creates random authorization number for a voter
     and adds the voter to the list of authorized voters.
     Nothing is encrypted yet"""
     def authNumStub(self, voter):
         randAuthNum = random.randint(1000,2000)
-        voter.setAuthNum(randAuthNum)
-        self.authList.append(voter)
-        self.ctf.notVotedList.append(voter)
-        
-    def canVote(self, voter):
-        #Check if voter is in CLA list and is authorized to vote
-        for i in range(len(self.authList)):
-            if self.authList[i].authNum == voter.authNum:
-                print ("You are authorized to vote!")
+        voter.setAuthNum(str(randAuthNum))
+        self.authList[hashlib.md5(voter.authNum.encode()).hexdigest()] = hashlib.md5(str(voter.name).encode()).hexdigest()
+        if(len(self.ctf.notVotedList) != 0):
+            self.ctf.notVotedList[hashlib.md5(voter.authNum.encode()).hexdigest()] = hashlib.md5(str(voter.name).encode()).hexdigest()
+        else:
+            self.ctf.notVotedList = self.authList
+        #test line please delete me
+        print(self.authList)
+
+    def canVote(self, authNumber):
+        if(authNumber != None):
+            #Check if voter is in CLA list and is authorized to vote
+            try:
+                self.authList[hashlib.md5(authNumber.encode()).hexdigest()]
                 return True
-            #Reject user because they are not authorized
-            if i == len(self.authList)-1:
-                print("You are not authorized to vote!")
+            except KeyError as e:
+                print('User has no auth number', str(e))
                 return False
-        return False
-                
-    def hasVoted(self, voter):
-        for i in range(len(self.ctf.notVotedList)):
-            #check if voter's authNum matches current authNum
-            if self.ctf.notVotedList[i].authNum == voter.authNum:
-                print("You have not voted yet!")
+            except IndexError as e:
+                print('User has no auth number.', str(e))
                 return False
-            #Reject user because they have already voted
-            if i == len(self.ctf.notVotedList)-1:
-                print("You have already voted!")
-                return True
-        return True
-    
+        else:
+            print('User has no auth number')
+            return False
 
 """Represents CTF"""
 class CTF:
@@ -142,36 +140,46 @@ class CTF:
         self.ID = "CTF"
         self.__privateKey, self.publicKey = createUserKeys() # the voter's keys
         #list of authorized voters who have not voted yet
-        self.notVotedList = []
-        self.votedList = []
+        self.notVotedList = {}
         self.options = []
         self.cla = cla
         cla.setCTF(self)
-        
+
     """Count Vote Stub
     Checks to see if the user is in the list of authorized
     users who haven't yet voted, then either rejects user or
     allows user to vote
     voter - a voter object
     randomVote - if a random vote needs to be calculated or the user will enter a vote"""
-    def countVoteStub(self, voter):        
+    def countVoteStub(self, voter, randomVote):
         #Check if voter is in CLA list and is authorized to vote
         if self.cla.canVote(voter):
             #check if voter is in CTF list and has voted
-            if (self.cla.hasVoted(voter) == False):
+            if (self.voterExists(voter.authNum) == True):
+                #calculate random vote
+                if(randomVote):
+                    #random vote
+                    self.randomVote(voter)
+                    #remove voter from list of people who haven't voted
+                    del self.notVotedList[hashlib.md5(voter.authNum.encode()).hexdigest() ]
+                else:
+                    #allow user to enter a vote manually
+                    voter.setVote(input("Please enter your vote: "))
+                    #remove voter from list of people who haven't voted
+                    del self.notVotedList[hashlib.md5(voter.authNum.encode()).hexdigest() ]
 
-                #remove voter from list of people who haven't voted and
-                #adds that voter to a list of people who have voted
-            
-                #allow user to enter a vote manually
-                voter.setVote(self.randomVote(voter))
-                #remove voter from list of people who haven't voted
-                self.notVotedList.remove(voter.authNum)
-                self.votedList.append(voter.authNum)
-                    
                 #get the vote
                 theVote = voter.vote
-                
+
+                #first candidate in list
+                if len(self.options) == 0:
+                    #create new candidate
+                    newCandidate = Candidate()
+                    #add to their vote count
+                    newCandidate.setNumber(theVote)
+                    #add to candidates list
+                    self.options.append(newCandidate)
+
                 #if vote has been counted yet
                 counted = False
                 #count the vote
@@ -181,23 +189,35 @@ class CTF:
                         #increase vote count
                         self.options[j].addVote()
                         counted = True
-                        print("Your vote has been counted!\n")
-            else: 
-                print("You have already voted!")
-        else: 
-            print("You are not eligible to vote!")            
-    
-    def printVotes(self):
-        for i in range(len(self.options)):
-            print("The final results are:")
-            print(self.options[i].numVotes)
-            print("----------------------")
-            
+                    #if candidate is not in votes list and vote has not been counted
+                    elif j == len(self.options)-1 and counted == False:
+                        #make new candidate
+                        newCandidate = Candidate()
+                        #give candidate a number
+                        newCandidate.setNumber(theVote)
+                        #add to candidates lsit
+                        self.options.append(newCandidate)
+                        #add vote
+                        self.options[j].addVote()
+                        counted = True
+                print("Your vote has been counted!\n")
+
+    def voterExists(self, authNumber):
+        #Check if voter is in CLA list and is authorized to vote
+        try:
+            self.notVotedList[hashlib.md5(authNumber.encode()).hexdigest()]
+            return True
+        except KeyError as e:
+            print('Voter has Voted', str(e))
+            return False
+        except IndexError as e:
+            print('Voter has Voted', str(e))
+            return False
     """Simulates random vote"""
     def randomVote(self, voter):
         aVote = string.ascii_uppercase[random.randint(0, 3)]
-        voter.setVote(aVote)                 
-            
+        voter.setVote(aVote)
+
 """Represents a candidate"""
 class Candidate:
     candidateNum = None
@@ -212,37 +232,37 @@ class Voter:
     #* Initializer / Instance Attributes
     def __init__(self):
         self.name = id(self); # the voter's "name"
-        # note that the "__" clause in front of private key protects 
+        # note that the "__" clause in front of private key protects
         #   its access from anyone but the instance of the object itself.
         self.__privateKey, self.publicKey = createUserKeys() # the voter's keys
         self.authNum = None # the voter's authNum (if any)
         self.voted = False # variable of whether voter has voted
         self.vote = None
-    
+
     #* sets the name of the voter
     def setName(self, newName):
         self.name = newName
     #* sets the vote of the voter
     def setVote(self,voteChoice):
         self.vote = voteChoice
-    #* returns the public key of this Voter  
+    #* returns the public key of this Voter
     def publicKey(self):
         return self.publicKey
     #* Sets Auth num to received auth num
     def setAuthNum(self, newAuthNum):
         self.authNum = newAuthNum
-        
+
     #* sends a message to a certain receiver
     def sendMessage(self, plaintext, receiver):
         #enrcypt plaintext using the receiver's public key
         x = encrypt(plaintext, receiver.publicKey)
-        
+
         #create signature using sender's private key
         s = createSign(self.__privateKey, plaintext)
-        
+
         encrMessage = [x, s]
         return encrMessage
-    
+
     #* decrypts a message received by a specific sender
     def recieveMessage(self, encrMessage, sender):
         message = decrypt(
@@ -252,7 +272,7 @@ class Voter:
             sender.publicKey
         )
         return message
-    
+
 
 
 def main():
@@ -274,13 +294,13 @@ def main():
         print("\t7. Who Has Voted")
         print("\t8. Quit.\n")
         choice = input(">> ")
-        
+
         #Make voters
         if choice == '1' and (timeit.default_timer()-start <=60):
             #allow user to re-enter number of voters if the number that
             #requested authorization > number of voters
             okay = False
-            
+
             #clear list of voters
             voters.clear()
 
@@ -314,7 +334,7 @@ def main():
                 else:
                     print("Sorry, there are only {} voters!".format(numVoters))
                 print("\n")
-                
+
         #Simulate random votes
         elif choice == '2'and (timeit.default_timer()-start <=60):
             #while there are people who have not voted
@@ -322,21 +342,22 @@ def main():
                 #get a random voter
                 randomVoter = random.randint(0, len(voters)-1)
                 #simulate and count random vote
-                ctf.countVoteStub(voters[randomVoter])
-            
+                ctf.countVoteStub(voters[randomVoter], True)
+
             if (len(ctf.notVotedList) == 0):
                 print("The list of voters is empty!")
-        
-        #Voting breakdown        
+
+        #Voting breakdown
         elif choice == '3' and (timeit.default_timer()-start <=60):
-            
+
             if len(ctf.options)!=0:
                 print ("Here is the voting breakdown:\nCandidate:\tNumber of Votes:")
+                print(len(ctf.options))
                 for i in range(len(ctf.options)):
                     print(ctf.options[i].candidateNum, "\t\t\t\t", ctf.options[i].numVotes)
             else:
                 print("Sorry, the list of candidates is empty!")
-       
+
         #Give user an authorization number
         elif choice == '4':
             newVoter = Voter()
@@ -345,25 +366,20 @@ def main():
             cla.authNumStub(newVoter)
             voters.append(newVoter)
             print ("Your authorization number is: ", newVoter.authNum)
-            
-        #Let user vote    
+
+        #Let user vote
         elif choice == '5':
             theNum = int(input("Please enter your authorization number: "))
-            for i in range(len(cla.authList)):
-                if cla.authList[i].authNum == theNum:
-                    ctf.countVoteStub(cla.authList[i], False)
-               
-        #Check if user has voted        
+            if (cla.canVote(theNum) == True):
+                    ctf.countVoteStub(cla.authList[hashlib.md5(theNum).hexdigest()], False)
+
+        #Check if user has voted
         elif choice == '6':
-            authNum = int(input("Please enter your authorization number: "))
-            for i in range(len(cla.authList)):
-                if cla.authList[i].authNum == authNum:
-                    if len(ctf.notVotedList) == 0 and cla.canVote(cla.authList[i]):
-                        print("You have already voted!")                    
-            for i in range(len(ctf.notVotedList)):
-                if ctf.notVotedList[i].authNum == authNum:
-                    ctf.hasVoted(ctf.notVotedList[i])
-        
+            authNum = input("Please enter your authorization number: ")
+            if (cla.canVote(authNum) == True and ctf.voterExists(authNum) == False):
+                        print("You have already voted!")
+            elif (cla.canVote(authNum) == True and ctf.voterExists(authNum) == True):
+                        print("You are able to Vote!")
         #See who has voted and who hasn't
         elif choice == '7':
             print("Voter\tVote Status")
@@ -372,12 +388,12 @@ def main():
                     print(voters[i].name, "\t\t No vote.")
                 else:
                     print(voters[i].name, "\t\t Voted.")
-                    
+
         #End simulation
         elif choice == '8' or (timeit.default_timer()-start > 60):
-            break 
+            break
         else:
             print("\n\nUnknown option {}.\n".format(choice))
-       
+
 if __name__ == '__main__':
     main()
