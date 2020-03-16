@@ -143,6 +143,7 @@ class CTF:
         self.__privateKey, self.publicKey = createUserKeys() # the voter's keys
         #list of authorized voters who have not voted yet
         self.notVotedList = []
+        self.votedList = []
         self.options = []
         self.cla = cla
         cla.setCTF(self)
@@ -153,34 +154,23 @@ class CTF:
     allows user to vote
     voter - a voter object
     randomVote - if a random vote needs to be calculated or the user will enter a vote"""
-    def countVoteStub(self,voter, randomVote):        
+    def countVoteStub(self, voter):        
         #Check if voter is in CLA list and is authorized to vote
-        if self.cla.canVote(voter):
+        if self.cla.canVote(voter.authNum):
             #check if voter is in CTF list and has voted
-            if (self.cla.hasVoted(voter) == False):
-                #calculate random vote
-                if(randomVote):
-                    #random vote
-                    self.randomVote(voter)
-                    #remove voter from list of people who haven't voted
-                    self.notVotedList.remove(voter)
-                else:
-                    #allow user to enter a vote manually
-                    voter.setVote(input("Please enter your vote: "))
-                    #remove voter from list of people who haven't voted
-                    self.notVotedList.remove(voter)
+            if (self.cla.hasVoted(voter.authNum) == False):
+
+                #remove voter from list of people who haven't voted and
+                #adds that voter to a list of people who have voted
+            
+                #allow user to enter a vote manually
+                voter.setVote(input("Please enter your vote: "))
+                #remove voter from list of people who haven't voted
+                self.notVotedList.remove(voter.authNum)
+                self.votedList.append(voter.authNum)
                     
                 #get the vote
                 theVote = voter.vote
-                
-                #first candidate in list
-                if len(self.options) == 0:
-                    #create new candidate
-                    newCandidate = Candidate()
-                    #add to their vote count
-                    newCandidate.setNumber(theVote)
-                    #add to candidates list
-                    self.options.append(newCandidate)
                 
                 #if vote has been counted yet
                 counted = False
@@ -191,24 +181,18 @@ class CTF:
                         #increase vote count
                         self.options[j].addVote()
                         counted = True
-                    #if candidate is not in votes list and vote has not been counted
-                    elif j == len(self.options)-1 and counted == False:
-                        #make new candidate
-                        newCandidate = Candidate()
-                        #give candidate a number
-                        newCandidate.setNumber(theVote)
-                        #add to candidates lsit
-                        self.options.append(newCandidate)
-                        #add vote
-                        self.options[j].addVote()
-                        counted = True
-                print("Your vote has been counted!\n")
-               
-    """Simulates random vote"""
-    def randomVote(self, voter):
-        aVote = string.ascii_uppercase[random.randint(0, 3)]
-        voter.setVote(aVote)                 
-
+                        print("Your vote has been counted!\n")
+            else: 
+                print("You have already voted!")
+        else: 
+            print("You are not eligible to vote!")            
+    
+    def printVotes(self):
+        for i in range(len(self.options)):
+            print("The final results are:")
+            print(self.options[i].numVotes)
+            print("----------------------")
+            
 """Represents a candidate"""
 class Candidate:
     candidateNum = None
