@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Created 12 March 2020
-@author: Bill, Phil, Fabien, Danielle
+The following program is a simulation of a group of voters voting for a certain person and the encryption of their votes. 
+When voters are created, each of them are chosen at random whether they are eligable or ineligable to vote; those who are
+eligable to vote will have a public and a private key. The keys are generated through using the RSA encryption method and
+hashing of the voter's name (a number in this simulation).
+
+@authors: Vasileios Georgopoulos, Phillip Tham, Fabien Dabies, Danielle Sarafian
+@version: Monday, March 16, 2020
 """
 
 from cryptography.hazmat.backends import default_backend
@@ -354,10 +359,6 @@ def main():
         print("\t1. Make Voters.")
         print("\t2. Simulate Votes.")
         print("\t3. See Results.")
-        # print("\t4. Request Voting Authorization.")
-        # print("\t5. Cast Vote.")
-        # print("\t6. Check Voting Status.")
-        # print("\t7. Who Has Voted")
         print("\t4. Quit.\n")
         choice = input(">> ")
 
