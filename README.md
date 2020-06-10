@@ -1,5 +1,6 @@
 # VotingSim
 # Cryptography Final Programming Project: Voting Center Simulation
+# @author: Vasileios Georgopoulos, Phillip Tham, Fabien Dabies, Danielle Sarafian
 
 # How to Use the Program:
 
